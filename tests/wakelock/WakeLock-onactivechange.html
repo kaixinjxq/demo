@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>WakeLock onactivechange Test</title>
+<link rel="author" title="Intel" href="http://www.intel.com">
+<link rel="help" href="https://w3c.github.io/wake-lock/">
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+
+<script>
+
+promise_test(t => {
+  let request, wakelock, eventWatcher;
+  return navigator.getWakeLock("screen")
+  .then(wakeLock => {
+    wakelock = wakeLock;
+    assert_false(wakelock.active, "the active is false before the wake lock is acquired");
+    eventWatcher = new EventWatcher(t, wakeLock, 'onactivechange');
+    request = wakelock.createRequest();
+    return eventWatcher.wait_for('onactivechange')
+  })
+  .then(evt => {
+    assert_true(evt.isTrusted && !evt.bubbles && !evt.cancelable && evt instanceof Event, 'a simple event is fired');
+    assert_equals(evt.type, "activechange", 'the event name is "activechange"');
+    assert_equals(evt.target, wakeLock, 'event.target is the WakeLock.');
+    assert_true(wakeLock.active, "the active is true if the wake lock has been acquired");
+    request.cancel();
+    return eventWatcher.wait_for('onactivechange')
+  })
+  .then(() => {
+    assert_false(wakelock.active, "the active is false if the wake lock has been released");
+  });
+}, "Test that 'onactivechange' is called and wakeLock active is valid");
+
+</script>

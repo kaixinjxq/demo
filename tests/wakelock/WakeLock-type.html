@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>WakeLockType Test</title>
+<link rel="author" title="Intel" href="http://www.intel.com">
+<link rel="help" href="https://w3c.github.io/wake-lock/">
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+
+<script>
+
+promise_test(t => {
+  return navigator.getWakeLock("screen")
+  .then(wakeLock => {
+    assert_equals(wakeLock.type, "screen");
+  });
+}, "Test that get a screen type WakeLock object when set a screen wake lock type paremeter");
+
+promise_test(t => {
+  return navigator.getWakeLock("system")
+  .then(wakeLock => {
+    assert_equals(wakeLock.type, "system");
+  });
+}, "Test that get a system type WakeLock object when set a system wake lock type paremeter");
+
+promise_test(t => {
+  return promise_rejects(t, new WakeLockTypeNotSupported(), navigator.getWakeLock());
+}, "Test that can't get a correct WakeLock object when set an empty wake lock type paremeter");
+
+promise_test(t => {
+  return promise_rejects(t, new WakeLockTypeNotSupported("unsupported"), navigator.getWakeLock());
+}, "Test that can't get a correct WakeLock object when set an unsupported wake lock type paremeter");
+
+</script>
