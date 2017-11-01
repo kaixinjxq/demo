@@ -14,17 +14,17 @@ promise_test(t => {
   .then(wakeLock => {
     wakelock = wakeLock;
     assert_false(wakelock.active, "the active is false before the wake lock is acquired");
-    eventWatcher = new EventWatcher(t, wakeLock, 'onactivechange');
+    eventWatcher = new EventWatcher(t, wakelock, 'activechange');
     request = wakelock.createRequest();
-    return eventWatcher.wait_for('onactivechange')
+    return eventWatcher.wait_for('activechange')
   })
   .then(evt => {
     assert_true(evt.isTrusted && !evt.bubbles && !evt.cancelable && evt instanceof Event, 'a simple event is fired');
     assert_equals(evt.type, "activechange", 'the event name is "activechange"');
-    assert_equals(evt.target, wakeLock, 'event.target is the WakeLock.');
-    assert_true(wakeLock.active, "the active is true if the wake lock has been acquired");
+    assert_equals(evt.target, wakelock, 'event.target is the WakeLock.');
+    assert_true(wakelock.active, "the active is true if the wake lock has been acquired");
     request.cancel();
-    return eventWatcher.wait_for('onactivechange')
+    return eventWatcher.wait_for('activechange')
   })
   .then(() => {
     assert_false(wakelock.active, "the active is false if the wake lock has been released");

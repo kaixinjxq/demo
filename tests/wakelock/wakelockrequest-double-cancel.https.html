@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>WakeLockRequest double cancel test</title>
+<link rel="author" title="Intel" href="http://www.intel.com">
+<link rel="help" href="https://w3c.github.io/wake-lock/">
+<script src=/resources/testharness.js></script>
+<script src=/resources/testharnessreport.js></script>
+
+<script>
+
+promise_test(t => {
+  return navigator.getWakeLock("screen")
+  .then(wakeLock => {
+    let request = wakeLock.createRequest();
+    assert_true(wakeLock.active, "the active is true if the wake lock has been acquired");
+    request.cancel();
+    assert_false(wakeLock.active, "the active is false if the wake lock has been released");
+    //If wake lock request is already canceled, then abort these steps, no error fired
+    request.cancel();
+  })
+}, "Test that no exception is thrown when calling cancel() on already canceled wake lock request");
+
+</script>
