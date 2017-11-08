@@ -2,40 +2,46 @@
 <meta charset="utf-8">
 <title>WakeLock object is independent</title>
 <link rel="author" title="Intel" href="http://www.intel.com">
+<link rel="author" title="Wanming Lin" href="mailto:wanming.lin@intel.com">
 <link rel="help" href="https://w3c.github.io/wake-lock/">
 <script src=/resources/testharness.js></script>
 <script src=/resources/testharnessreport.js></script>
 
-<script>
+<body>
+<script id="iframe" type="text/plain">
 
-function make_script() {
-  return '<script>' +
-         '  let iframeWakeLock, iframeRequest;' +
-         '  window.onmessage = message => {' +
-         '    if (message.data === "INIT") {' +
-         '      navigator.getWakeLock("screen")' +
-         '      .then(wakeLock => {' +
-         '        iframeWakeLock = wakeLock;' +
-         '        parent.postMessage(iframeWakeLock.active, "*");' +
-         '      });' +
-         '    } else if (message.data === "ACQUIRED") {' +
-         '      iframeRequest = iframeWakeLock.createRequest();' +
-         '      parent.postMessage(iframeWakeLock.active, "*");' +
-         '    } else if (message.data === "RELEASED") {' +
-         '      iframeRequest.cancel();' +
-         '      parent.postMessage(iframeWakeLock.active, "*");' +
-         '    }' +
-         '  };' +
-         '<\/script>';
+let iframeWakeLock, iframeRequest;
+window.onmessage = async message => {
+  switch(message.data) {
+  case "INIT":
+    iframeWakeLock = await navigator.getWakeLock("screen");
+    parent.postMessage(iframeWakeLock.active, "*");
+    break;
+  case "ACQUIRED":
+    iframeRequest = iframeWakeLock.createRequest();
+    parent.postMessage(iframeWakeLock.active, "*");
+    break;
+  case "RELEASED":
+    iframeRequest.cancel();
+    parent.postMessage(iframeWakeLock.active, "*");
+    break;
+  default:
+    parent.postMessage("unknown operation", "*");
+  }
 }
 
-function load_iframe(src) {
+</script>
+
+<script>
+
+function load_iframe() {
   return new Promise(resolve => {
     const iframe = document.createElement("iframe");
     iframe.onload = () => { resolve(iframe); };
-    iframe.srcdoc = src;
-    iframe.style.display = "none";
-    document.documentElement.appendChild(iframe);
+    iframe.srcdoc = "<script>" +
+                    document.getElementById('iframe').textContent +
+                    "<\/script>";
+    document.body.appendChild(iframe);
   });
 }
 
@@ -54,38 +60,32 @@ promise_test(async t => {
   let wakeLock1 = await navigator.getWakeLock("screen");
   let request1 = wakeLock1.createRequest();
   let wakeLock2 = await navigator.getWakeLock("screen");
-  let iframe, request2;
-  return load_iframe(make_script())
-  .then(ifr => {
-    iframe = ifr;
-    iframe.contentWindow.postMessage('INIT', '*');
-    return wait_for_message(iframe);
-  })
-  .then(message => {
-    //only wakeLock1 has been acquired
-    assert_true(wakeLock1.active, "the active is true if the wake lock has been acquired");
-    assert_false(wakeLock2.active, "the active is false before the wake lock is acquired");
-    assert_false(message, "the active is false before the iframe wake lock is acquired");
-    iframe.contentWindow.postMessage('ACQUIRED', '*');
-    return wait_for_message(iframe);
-  })
-  .then(message => {
-    //wakeLock2 and iframeWakeLock have been acquired, wakeLock1 has been released
-    request1.cancel();
-    request2 = wakeLock2.createRequest();
-    assert_false(wakeLock1.active, "the active is false if the wake lock has been released");
-    assert_true(wakeLock2.active, "the active is true if the wake lock has been acquired");
-    assert_true(message, "the active is true if the iframe wake lock has been acquired");
-    iframe.contentWindow.postMessage('RELEASED', '*');
-    return wait_for_message(iframe);
-  })
-  .then(message => {
-    //all the wake lock have been released
-    request2.cancel();
-    assert_false(wakeLock1.active, "the active is false if the wake lock has been released");
-    assert_false(wakeLock2.active, "the active is false if the wake lock has been released");
-    assert_false(message, "the active is false if the iframe wake lock has been released");
-  });
+  let iframe = await load_iframe();
+
+  //when wakeLock1 is acquired, wakeLock2 and iframeWakeLock are still inactived
+  iframe.contentWindow.postMessage("INIT", "*");
+  let isActive1 = await wait_for_message(iframe);
+  assert_true(wakeLock1.active, "the active is true when wakeLock1 is acquired");
+  assert_false(wakeLock2.active, "the active is false before wakeLock2 is acquired");
+  assert_false(isActive1, "the active is false before iframeWakeLock is acquired");
+
+  //when wakeLock2 and iframeWakeLock are acquired, wakeLock1 is still actived
+  iframe.contentWindow.postMessage("ACQUIRED", "*");
+  let isActive2 = await wait_for_message(iframe);
+  request1.cancel();
+  let request2 = wakeLock2.createRequest();
+  assert_false(wakeLock1.active, "the active is false when wakeLock1 is released");
+  assert_true(wakeLock2.active, "the active is true when wakeLock2 is acquired");
+  assert_true(isActive2, "the active is true when iframeWakeLock is acquired");
+
+  //release all wake lock objects
+  iframe.contentWindow.postMessage("RELEASED", "*");
+  let isActive3 = await wait_for_message(iframe);
+  request2.cancel();
+  assert_false(wakeLock1.active, "the active is false when wakeLock1 is released");
+  assert_false(wakeLock2.active, "the active is false when wakeLock2 is released");
+  assert_false(isActive3, "the active is false when iframeWakeLock is released");
 }, "Test that the WakeLock active is independent.");
 
 </script>
+</body>
