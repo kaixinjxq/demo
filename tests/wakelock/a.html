@@ -1,0 +1,10 @@
+<html>
+<div id="test">test<br></div>
+<script>
+
+document.addEventListener("visibilitychange", function() {
+  document.getElementById("test").innerHTML += "Is hidden: " + document.hidden + "<br>";
+});
+
+</script>
+</html>
