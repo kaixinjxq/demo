@@ -62,11 +62,11 @@ async function checkPopulateMatrix(t, sensorType) {
   // Works for all supported types.
   const mat_32 = new Float32Array(16);
   sensor.populateMatrix(mat_32);
-  //assert_array_approx_equals(mat_32, mat_expect, float_precision);
+  assert_array_approx_equals(mat_32, mat_expect, float_precision);
 
   const mat_64 = new Float64Array(16);
   sensor.populateMatrix(mat_64);
-  //assert_array_equals(mat_64, mat_expect);
+  assert_array_equals(mat_64, mat_expect);
 
   const mat_dom = new DOMMatrix();
   sensor.populateMatrix(mat_dom);
@@ -75,7 +75,7 @@ async function checkPopulateMatrix(t, sensorType) {
   // Sets every matrix element.
   mat_64.fill(123);
   sensor.populateMatrix(mat_64);
-  //assert_array_equals(mat_64, mat_expect);
+  assert_array_equals(mat_64, mat_expect);
 
   sensor.stop();
 }
@@ -96,7 +96,7 @@ promise_test(t => {
   return checkPopulateMatrix(t, RelativeOrientationSensor);
 }, "Test RelativeOrientationSensor.populateMatrix() method works correctly.");
 
-runGenericSensorTests(AbsoluteOrientationSensor);
-runGenericSensorTests(RelativeOrientationSensor);
+//runGenericSensorTests(AbsoluteOrientationSensor);
+//runGenericSensorTests(RelativeOrientationSensor);
 
 </script>
