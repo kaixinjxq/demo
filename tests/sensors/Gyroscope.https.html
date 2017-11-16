@@ -35,29 +35,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <script src="../resources/testharnessreport.js"></script>
 <script src="./resources/generic-sensor-tests.js"></script>
 <div id="log"></div>
-<iframe src="./resources/Gyroscope-support-iframe.html" id="frame" style="display:none" sandbox="allow-scripts">
-</iframe>
 <script>
 
-function verify_sensor_reading(sensor, reading_not_null = true) {
-  if (reading_not_null) {
-    return sensor.x != null &&
-           sensor.y != null &&
-           sensor.z != null &&
-           sensor.timestamp != null;
-  }
-  return sensor.x == null &&
-         sensor.y == null &&
-         sensor.z == null &&
-         sensor.timestamp == null;
-}
-
-function reading_to_array(sensor) {
-  let arr = new Array(sensor.timestamp, sensor.x, sensor.y, sensor.z);
-  return arr;
-}
-
-runSensorFrequency(Gyroscope);
-runGenericSensorTests(Gyroscope, verify_sensor_reading, reading_to_array);
+runGenericSensorTests(Gyroscope);
 
 </script>
