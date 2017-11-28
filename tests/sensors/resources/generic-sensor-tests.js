@@ -8,6 +8,19 @@ const properties = {
   'RelativeOrientationSensor' : ['timestamp', 'quaternion']
 };
 
+const features = {
+  "AmbientLightSensor" : ["ambient-light-sensor"],
+  "Accelerometer" : ["accelerometer"],
+  "LinearAccelerationSensor" : ["accelerometer"],
+  "GravitySensor" : ["accelerometer"],
+  "Gyroscope" : ["gyroscope"],
+  "GeolocationSensor" : ["geolocation"],
+  "Magnetometer" : ["magnetometer"],
+  "UncalibratedMagnetometer" : ["magnetometer"],
+  "AbsoluteOrientationSensor" : ["accelerometer", "gyroscope", "magnetometer"],
+  "RelativeOrientationSensor" : ["accelerometer", "gyroscope"]
+};
+
 function assert_reading_not_null(sensor) {
   for (let property in properties[sensor.constructor.name]) {
     let propertyName = properties[sensor.constructor.name][property];
@@ -32,24 +45,13 @@ function reading_to_array(sensor) {
 }
 
 function runGenericSensorTests(sensorType) {
-  promise_test(async t => {
-    const sensor = new sensorType();
-    const sensorWatcher = new EventWatcher(t, sensor, ["reading", "error"]);
-    sensor.start();
-
-    await sensorWatcher.wait_for("reading");
-    assert_true(sensor.hasReading);
-    const timestamp = sensor.timestamp;
-    sensor.stop();
-    assert_false(sensor.hasReading);
-
-    sensor.start();
-    await sensorWatcher.wait_for("reading");
-    assert_true(sensor.hasReading);
-    assert_greater_than(timestamp, 0);
-    assert_greater_than(sensor.timestamp, timestamp);
-    sensor.stop();
-  }, `${sensorType.name}: Test that fresh reading is fetched on start()`);
+  const sensorName = sensorType.name;
+  const featureNameList = features[sensorName];
+  const header = `Feature-Policy header ${featureNameList.join('\\')} *`;
+  
+  promise_test(t => {
+    return promise_rejects(t, "SecurityError", new sensorType());
+  }, "aa");
 
   promise_test(async t => {
     const sensor = new sensorType();
@@ -63,7 +65,7 @@ function runGenericSensorTests(sensorType) {
     sensor.stop();
     assert_reading_null(sensor);
     assert_false(sensor.hasReading);
-  }, `${sensorType.name}: Test that 'onreading' is called and sensor reading is valid`);
+  }, `${sensorName}: ${header} disallows cross-origin iframes.`);
 
   promise_test(async t => {
     const sensor1 = new sensorType();
@@ -158,6 +160,25 @@ function runGenericSensorTests(sensorType) {
   }, `${sensorType.name}: no exception is thrown when calling stop() on already stopped sensor`);
 
   promise_test(async t => {
+    const sensor = new sensorType();
+    const sensorWatcher = new EventWatcher(t, sensor, ["reading", "error"]);
+    sensor.start();
+
+    await sensorWatcher.wait_for("reading");
+    assert_true(sensor.hasReading);
+    const timestamp = sensor.timestamp;
+    sensor.stop();
+    assert_false(sensor.hasReading);
+
+    sensor.start();
+    await sensorWatcher.wait_for("reading");
+    assert_true(sensor.hasReading);
+    assert_greater_than(timestamp, 0);
+    assert_greater_than(sensor.timestamp, timestamp);
+    sensor.stop();
+  }, `${sensorType.name}: Test that fresh reading is fetched on start()`);
+
+  promise_test(async t => {
     const iframe = document.createElement('iframe');
     iframe.srcdoc = '<script>' +
                     '  window.onmessage = message => {' +
@@ -198,11 +219,40 @@ function runGenericSensorTests(sensorType) {
   }, `${sensorType.name}: sensor readings can not be fired on the background tab`);
 
   promise_test(async t => {
+    const fastSensor = new sensorType({frequency: 30});
+    const slowSensor = new sensorType({frequency: 5});
+    slowSensor.start();
+
+    const fastCounter = await new Promise((resolve, reject) => {
+      let fastCounter = 0;
+      let slowCounter = 0;
+
+      fastSensor.onreading = () => {
+        fastCounter++;
+      }
+      slowSensor.onreading = () => {
+        slowCounter++;
+        if (slowCounter == 1) {
+          fastSensor.start();
+        } else if (slowCounter == 3) {
+          fastSensor.stop();
+          slowSensor.stop();
+          resolve(fastCounter);
+        }
+      }
+      fastSensor.onerror = reject;
+      slowSensor.onerror = reject;
+    });
+    assert_greater_than(fastCounter, 2,
+                        "Fast sensor overtakes the slow one");
+  }, `${sensorType.name}: frequency hint works`);
+
+  promise_test(async t => {
     // Create a focused editbox inside a cross-origin iframe,
     // sensor notification must suspend.
     const iframeSrc = 'data:text/html;charset=utf-8,<html><body>'
                     + '<input type="text" autofocus></body></html>';
-    let iframe = document.createElement('iframe');
+    const iframe = document.createElement('iframe');
     iframe.src = encodeURI(iframeSrc);
 
     const sensor = new sensorType();
@@ -217,20 +267,17 @@ function runGenericSensorTests(sensorType) {
     const iframeWatcher = new EventWatcher(t, iframe, "load");
     document.body.appendChild(iframe);
     await iframeWatcher.wait_for("load");
+    const cachedSensor2 = reading_to_array(sensor);
+    assert_array_equals(cachedSensor1, cachedSensor2);
 
-    t.step_timeout(() => {
-      const cachedSensor2 = reading_to_array(sensor);
-      assert_array_equals(cachedSensor1, cachedSensor2);
-      window.focus();
-    }, 100);
+    iframe.remove();
     await sensorWatcher.wait_for("reading");
     const cachedSensor3 = reading_to_array(sensor);
     assert_greater_than(sensor.timestamp, cachedTimestamp);
 
-    iframe.remove();
     sensor.stop();
-  }, `${sensorType.name}: sensor receives suspend / resume notifications when`
-              + ` cross-origin subframe is focused`);
+  }, `${sensorType.name}: sensor receives suspend / resume notifications when\
+  cross-origin subframe is focused`);
 }
 
 function runGenericSensorInsecureContext(sensorType) {
@@ -250,3 +297,4 @@ function runGenericSensorOnerror(sensorType) {
     assert_equals(event.error.name, 'NotReadableError');
   }, `${sensorType.name}: 'onerror' event is fired when sensor is not supported`);
 }
+
