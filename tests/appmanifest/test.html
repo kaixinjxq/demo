@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<title>Web App Manifest Demo</title>
+
+<!-- Startup configuration -->
+<link rel="manifest" href="manifest.json">
+
+
+<!-- Fallback application metadata for legacy browsers -->
+<meta name="application-name" content="Racer3K">
+<link rel="icon" sizes="16x16 32x32 48x48" href="lo_def.ico">
+<link rel="icon" sizes="512x512" href="hi_def.png">
+<link rel="author" title="Intel" href="http://www.intel.com">
+
+<h1>Web App Manifest Demo</h1>
+
+ <div id="container">
+
+    <button hidden id="install">Install to homescreen!</button>
+
+    <p>This example demonstrates intercepting the <code>beforeinstallprompt</code> event.</p>
+
+    <p>To try it out, click <strong>Add to homescreen</strong> from the Chrome DevTools Application panel.</p>
+
+  </div>
+
+<script>
+'use strict';
+
+var isSecureOrigin = location.protocol === 'https:' ||
+  location.host === 'localhost';
+if (!isSecureOrigin) {
+  alert('getUserMedia() must be run from a secure origin: HTTPS or localhost.' +
+    '\n\nChanging protocol to HTTPS');
+  location.protocol = 'HTTPS';
+}
+
+var installButton = document.getElementById('install');
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(() => {
+    return navigator.serviceWorker.ready;
+  }).then(reg => {
+    console.log('Service Worker ready :^)', reg);
+  }).catch(error => {
+    console.log('Service Worker error :^(', error);
+  });
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    console.log('beforeinstallprompt event:', event);
+    installButton.removeAttribute('hidden');
+    installButton.addEventListener('click', () => {
+      event.prompt();
+      installButton.setAttribute('disabled', true);
+    });
+  });
+}
+
+window.onappinstalled = ()=>{
+  console.log("onappinstalled1")
+}
+</script>

@@ -1,0 +1,16 @@
+{
+  "name": "Donate App",
+  "description": "This app helps you donate to worthy causes.",
+  "icons": [{
+    "src": "images/icon.png",
+    "sizes": "256x256"
+  }],
+  "serviceworker": {
+    "src": "sw.js",
+    "scope": "/appmainfest",
+    "use_cache": false
+  },
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "start_url": "test.html"
+}
