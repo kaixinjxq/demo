@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<!--
+Copyright (c) 2017 Intel Corporation.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of works must retain the original copyright notice, this list
+  of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the original copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+* Neither the name of Intel Corporation nor the names of its contributors
+  may be used to endorse or promote products derived from this work without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY INTEL CORPORATION "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL INTEL CORPORATION BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+<meta name="description" content="Sensor info">
+<title>GenericSensor power consumption test</title>
+<div id="error" style="color:red"></div><br>
+
+Sensor: <br>
+<label><input type="checkbox" name="sensors" value="AmbientLightSensor" />AmbientLightSensor</label><br>
+<label><input type="checkbox" name="sensors" value="Accelerometer" />Accelerometer</label><br>
+<label><input type="checkbox" name="sensors" value="LinearAccelerationSensor" />LinearAccelerationSensor</label><br>
+<label><input type="checkbox" name="sensors" value="Gyroscope" />Gyroscope</label><br>
+<label><input type="checkbox" name="sensors" value="Magnetometer" />Magnetometer</label><br>
+<label><input type="checkbox" name="sensors" value="AbsoluteOrientationSensor" />AbsoluteOrientationSensor</label><br>
+<label><input type="checkbox" name="sensors" value="RelativeOrientationSensor" />RelativeOrientationSensor</label><br>
+Frequency: <br>
+<label><input type="radio" name="freqs" value="10" onclick="getFreq(this)" />10</label><br>
+<label><input type="radio" name="freqs" value="30" onclick="getFreq(this)" />30</label><br>
+<label><input type="radio" name="freqs" value="60" onclick="getFreq(this)" checked="true" />60</label><br>
+
+<input type="button" id="start" value="Start" onClick="javascript:run()">
+
+<p id="info" hidden>
+Current Information:<br>
+
+Sensor:<span id="name"></span><br>
+Frequency: <span id="freq"></span><br>
+</p>
+<script>
+
+var freq = 60;
+
+function getFreq(obj) {
+  freq = obj.value;
+}
+
+function run() {
+  document.getElementById("error").innerHTML = "";
+
+  var sensors = document.getElementsByName("sensors");
+  var flag = true;
+
+  for (var i = 0; i < sensors.length; i++) {
+    if (sensors[i].checked) {
+      main(sensors[i].value);
+      flag = false;
+    }
+  }
+
+  if (flag) {
+    document.getElementById("error").innerHTML = "There is no sensor checked";
+    return;
+  }
+
+  document.getElementById("start").disabled=true;
+}
+
+function main(sensor_name) {
+  var options = null;
+  var sensorConstructor = null;
+
+  if (!isNaN(freq)) {
+    options = {
+      frequency: freq
+    };
+  }
+
+  switch (sensor_name) {
+  case "AmbientLightSensor":
+    if ('AmbientLightSensor' in window) {
+      sensorConstructor = AmbientLightSensor;
+    }
+    break;
+  case "Accelerometer":
+    if ('Accelerometer' in window) {
+      sensorConstructor = Accelerometer;
+    }
+    break;
+  case "LinearAccelerationSensor":
+    if ('LinearAccelerationSensor' in window) {
+      sensorConstructor = LinearAccelerationSensor;
+    }
+    break;
+  case "Gyroscope":
+    if ('Gyroscope' in window) {
+      sensorConstructor = Gyroscope;
+    }
+    break;
+  case "Magnetometer":
+    if ('Magnetometer' in window) {
+      sensorConstructor = Magnetometer;
+    }
+    break;
+  case "AbsoluteOrientationSensor":
+    if ('AbsoluteOrientationSensor' in window) {
+      sensorConstructor = AbsoluteOrientationSensor;
+    }
+    break;
+  case "RelativeOrientationSensor":
+    if ('RelativeOrientationSensor' in window) {
+      sensorConstructor = RelativeOrientationSensor;
+    }
+    break;
+  default:
+    document.getElementById("error").innerHTML = "There is no " + sensor_name + " in window";
+    return;
+  }
+
+  var sensor = null;
+  try {
+    if (options)
+      sensor = new sensorConstructor(options);
+    else
+      sensor = new sensorConstructor();
+  } catch (e) {
+    document.getElementById("error").innerHTML = e.name + ": " + e.message;
+    return;
+  }
+
+  sensor.name = sensor_name;
+  sensor.frequency = (options && options.hasOwnProperty('frequency')) ? options.frequency + ' Hz' : 'default';
+
+  document.getElementById("name").innerHTML += " " + sensor.name;
+  document.getElementById("freq").innerHTML = sensor.frequency;
+  document.getElementById("info").style.display = "block";
+
+  var timestamp,
+      illuminance,
+      x,
+      y,
+      z,
+      quaternion,
+      targetMatrix = new Float32Array(16),
+      tmp;
+  sensor.onreading = function (event) {
+    switch (sensor_name) {
+    case "AmbientLightSensor":
+      timestamp = sensor.timestamp;
+      illuminance = sensor.illuminance;
+      break;
+    case "Accelerometer":
+      timestamp = sensor.timestamp;
+      x = sensor.x;
+      y = sensor.y;
+      z = sensor.z;
+      break;
+    case "LinearAccelerationSensor":
+      timestamp = sensor.timestamp;
+      x = sensor.x;
+      y = sensor.y;
+      z = sensor.z;
+      break;
+    case "Gyroscope":
+      timestamp = sensor.timestamp;
+      x = sensor.x;
+      y = sensor.y;
+      z = sensor.z;
+      break;
+    case "Magnetometer":
+      timestamp = sensor.timestamp;
+      x = sensor.x;
+      y = sensor.y;
+      z = sensor.z;
+      break;
+    case "AbsoluteOrientationSensor":
+      timestamp = sensor.timestamp;
+      quaternion = sensor.quaternion;
+      sensor.populateMatrix(targetMatrix);
+      tmp = targetMatrix;
+      break;
+    case "RelativeOrientationSensor":
+      timestamp = sensor.timestamp;
+      quaternion = sensor.quaternion;
+      sensor.populateMatrix(targetMatrix);
+      tmp = targetMatrix;
+      break;
+    default:
+      document.getElementById("error").innerHTML = "There is no " + sensor_name + " in window";
+      return;
+    }
+  }
+
+  sensor.onerror = function (event) {
+    document.getElementById("error").innerHTML = event.error.name + ": " + event.error.message;
+  };
+
+  sensor.start();
+}
+
+</script>
